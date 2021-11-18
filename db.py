@@ -11,16 +11,18 @@ class DatabaseError(Exception):
 def getCredentials():
     # Returns username, password, connection string info - is this a bad idea?
     data = None
-    with open('config.json', 'r') as f:
-        data = json.load(f)['db']
-    return data
+#   TODO fix the relative loading thing
+#    with open('/home/github/StockWatcher/config.json', 'r') as f:
+#        data = json.load(f)['db']
+    data = {"db": {"user": "stock_watcher", "password": "StockWatcher!1234", "database":"stock_watcher","host":"localhost"}}
+    return data['db']
 
 def getConnection():
     config = getCredentials()
     try:
         cnx = mysql.connector.connect(**config)
         return cnx
-    except mysql.connctor.Error as err:
+    except mysql.connector.Error as err:
         if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
             print("Wrong username/password")
         elif err.errno == errorcode.ER_BAD_DB_ERROR:
