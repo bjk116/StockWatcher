@@ -1,3 +1,4 @@
 #/usr/bin/python3
-cd ~/projects/python/experimental/price_watcher
+# TODO make this work no matter what directory were are in
+cd ~/github/StockWatcher
 python3 webscraper.py >> log.log
