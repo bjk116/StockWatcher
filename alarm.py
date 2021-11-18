@@ -1,5 +1,6 @@
 import db
-
+import data
+import subprocess
 # TO DO: Make ALARM_TYPES and NOTIFICATION_TYPES be populated by db of same tablenames
 # TO DO: Add columns to ALARM TYPES that say PW_gt/PW_lt are of type PriceWatch and the others are of time differential type
 # PW stands for Price Watch, gt is greater than, lt is less than
@@ -12,7 +13,8 @@ class Alarm():
     """
     An alarm that is attached tto certain ticker conditions.
     """
-    def __init__(self, ticker, alarm_type, notification_type, price=None, differential=None):
+    currentPrice = None
+    def __init__(self, ticker_id, notification_type, alarm_type, price=None, differential=None):
         """
         Args: 
             ticker: str, like ETH.X or ACB or SPY, but self.ticker becomes the id of the ticker in the db
@@ -21,9 +23,9 @@ class Alarm():
             price: float - use for PW_gt or PW_lt alarm as trigger///
             increase: float, represented as a percent.  so 1.0 represents 1.0% increase
         """
-        self.ticker = self.validateTicker(ticker)
-        self.alarm_type = self.validateAlarmType(alarm_type)
-        self.notification_type = self.validateNotificationType(notification_type)
+        self.ticker_id, self.ticker = self.validateTicker(ticker_id)
+        self.alarm_type_id, self.alarm_type = self.validateAlarmType(alarm_type)
+        self.notification_type_id, self.notification_type = self.validateNotificationType(notification_type)
         # Mutual exclusion - price watch or differential watch only
         if price is not None:
             self.price = self.validatePrice(price)
@@ -31,39 +33,47 @@ class Alarm():
         elif differential is not None:
             self.differential = self.validatedifferential(differential)
             self.price = None
-    
-    def validateTicker(self, ticker):
+        print(str(self.alarm_type_id), str(self.alarm_type))
+
+    def validateTicker(self, ticker_id):
         # Does the ticker exist in our db?
+        # This check makes some sense, we wont be keeping price records of tickers i don't want to follow
+        # TODO this just reminded me - make prices foreign key on tickers make it such that the prices get deleted when the ticker is deleted on delete cascade i think
+        ticker_data = db.runQuery(f"SELECT id, symbol FROM ticker WHERE id = {ticker_id}")
         try:
-            ticker_id = db.runScalarQuery(f"SELECT id FROM ticker WHERE symbol = '{ticker}'")
-            return ticker_id
+            return ticker_data[0]
         except IndexError as e:
-            # We get IndexErrors when we run db.runScalarQuery and get not results - not sure if it would be better to handle on db
-            # Side or what.  Perhaps a custom error gets passed back, like NoResultError or something? not sure.
-            raise ValueError(f"Ticker {symbol} is setup in our application and therefore we cannot set an alarm on it")
+            raise ValueError(f"Ticker id: {ticker_id} cannot be found in the database.  Please use a ticker that exists.")
 
     def validateAlarmType(self, alarm_type):
-        if alarm_type not in ALARM_TYPES:
-            raise ValueError(f"Selected alarm type {alarm_type} is not supported")
-        return alarm_type
+        # Not sure how I feel about this check, if its necessary, though it feels like it does.
+        # Only nice thing to take away - I like the pythonic-ness of this code. at least i think its pythonic
+        alarm_type_data = db.runQuery(f"SELECT id, alarm_type from alarm_types WHERE id = {alarm_type}")
+        try:
+            return alarm_type_data[0]
+        except IndexError as e:
+            raise ValueError(f"Alarm type is database has not been implemented ... yet.")
 
     def validateNotificationType(self, notification_type):
-        if notification_type not in NOTIFICATION_TYPES:
-            raise ValueError(f"{notification_type} is not a supported notification type")
-        return notification_type
-    
+        notification_type_data = db.runQuery(f"SELECT id, notification_type from notification_types WHERE id = {notification_type}")
+        try:
+            return notification_type_data[0]
+        except IndexError as e:
+            raise ValueError(f"Notification type is not supported.")
+
     def validatePrice(self, price):
         if self.alarm_type in ALARM_TYPES[:2]:
             return price
-        raise ValueError(f"The alarm type {self.alarm_type} does not support price argument")
+#        raise ValueError(f"The alarm type {self.alarm_type} does not support price argument")
     
     def validatedifferential(self, differential):
         if self.alarm_type in ALARM_TYPES[2:]:
             return differential
-        raise ValueError(f"The alarm type {self.alarm_type} does not support increase argument")
+#        raise ValueError(f"The alarm type {self.alarm_type} does not support increase argument")
 
     def save(self):
         """
+        #TODO this seems inappropriate here, should perhaps be outside the class? Not sure.
         Saves the current alarm configuration to the database
         """
         alarm_type_id = ALARM_TYPES.index(self.alarm_type) + 1
@@ -76,21 +86,83 @@ class Alarm():
         print(query)
         db.runUpdateQuery(query)
 
-    def load(self):
-        """
-        Loads alarm from database - perhaps this should be outside the class? 
-        To do - figure out this part and the right scope
-        """
+    def notifyLaptop(self, message):
+        print("Attempting to notify via laptop")
+        subprocess.call(['notify-send', message['title'], message['subtitle']])
+
+
+    def notifySMS(self, message):
+        pass
+    
+    def notifyEmail(self, message):
         pass
 
     def notify(self, message):
-        pass
+        # Make a message, should be able to do it based on alarm_type and price or differential.
+        # then, using same method as in checkConditions, use a dict of functions to dispatch the method in the preferred manner
+        # But ultimately, this may called based on log alarms.
+        mapping = {
+            'Laptop':self.notifyLaptop, 
+            'SMS':self.notifyEmail, 
+            'Email':self.notifyEmail
+        }
+        mapping[self.notification_type](message)
+
+
+    def checkPriceGT(self):
+        self.currentPrice = data.getCurrentPrice(self.ticker_id)
+        if self.currentPrice >= self.price:
+            message = {
+                "title":f"Price of {self.ticker} is above {self.price}!",
+                "subtitle": f"Current price is {self.currentPrice}"
+            }
+            self.notify(message)
     
-    def notifyLaptop(self):
-        pass
-    
-    def notifySMS(self):
-        pass
-    
-    def notifyEmail(self):
-        pass
+    def checkPriceLT(self):
+        self.currentPrice = data.getCurrentPrice(self.ticker_id)
+        if self.currentPrice <= self.price:
+            message = {
+                "title":f"Price of {self.ticker} is below {self.price}!",
+                "subtitle": f"Current price is {self.currentPrice}"
+            }
+            self.notify(message)
+
+    def checkConditions(self):
+        """
+        Where the meat of the alarm logic will go, checking currnet prices against differentialand 
+        """
+        try:
+            mapping =   {
+                            "PW_gt":self.checkPriceGT,
+                            "PW_lt":self.checkPriceLT,
+                            "inc_gt_over_t":None,
+                            "dec_gt_over_t":None
+                        }
+            mapping[self.alarm_type]()
+        except (KeyError, TypeError) as e:
+            # Catch if key does not exist, or if alarm type is None
+            raise ValueError("Implementation of your type has not been done yet.")
+
+    def __str__(self):
+        return f"Alarm of {self.alarm_type} notify by {self.notification_type} for {self.ticker} with price {self.price} or differential {self.differential}"
+
+def loadAlarms():
+    """
+    Loads alarm from database - perhaps this should be outside the class? 
+    To do - figure out this part and the right scope
+    # TODO Refactor so that malformed db entries don't ruin the entire thing, just get skipped and logged
+    """
+    alarms = db.runQuery("SELECT fk_ticker_id, fk_notification_type_id, fk_alarm_type_id, price, differential FROM alarms")
+    print(alarms)
+    return [Alarm(ticker, notification_type_id, alarm_type_id, price=price, differential=differential) for (ticker, notification_type_id, alarm_type_id, price, differential) in alarms]
+
+def runAlarms():
+    # TODO just occured to me here the foreign key constriant shoudl be if the ticker id is deleted, the alarm should be deleted.
+    # Or perhaps the alarm should have a column "deleted" that turns true.  Could be done as a trigger on the ticker table.    
+    alarms = loadAlarms()
+    for alarm in alarms:
+        print(alarm)
+        alarm.checkConditions()
+
+if __name__ == "__main__":
+    runAlarms()
