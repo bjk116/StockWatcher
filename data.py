@@ -8,7 +8,12 @@ def getTickers():
     return db.runQuery("SELECT id, ticker FROM tickers")
 
 def getCurrentTickerValues():
-    query = "SELECT * FROM prices p WHERE (started_t_stamp,fk_symbol_id) IN (SELECT MAX(started_t_stamp), fk_symbol_id FROM prices GROUP BY fk_symbol_id)"
+    query = """
+    SELECT t.symbol, p.price, p.finished_t_stamp
+    FROM prices p 
+    LEFT JOIN ticker t ON t.id = p.fk_symbol_id 
+    WHERE (p.started_t_stamp,p.fk_symbol_id) IN (SELECT MAX(started_t_stamp), fk_symbol_id FROM prices GROUP BY fk_symbol_id);
+    """
     return db.runQuery(query)
 
 def getPortfolio(as_of_date=None, with_subtotals=False):
@@ -38,7 +43,6 @@ def getPortfolio(as_of_date=None, with_subtotals=False):
     except ValueError as e:
         # To Do - log error
         print(str(e))
-
     return data
 
 def calculatePortfolioPerformance(start_date, end_date):
@@ -75,5 +79,11 @@ def calculatePerformanceFor(end_date=None):
     """
     if end_date is None:
         end_date = datetime.datetime.now()
-    start_date = end_date - datetime.timedelta(days=2)
+    start_date = end_date - datetime.timedelta(days=4)
     calculatePortfolioPerformance(start_date, end_date)
+
+def getCurrentPrice(ticker_id):
+    """
+    Gets latest price for the ticker_id
+    """
+    return db.runScalarQuery(f"SELECT price FROM prices WHERE fk_symbol_id = {ticker_id} ORDER BY id desc limit 1")
