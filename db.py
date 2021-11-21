@@ -4,6 +4,7 @@ The database layer, extracted away.
 import json
 import mysql.connector
 from mysql.connector import errorcode
+import classes
 
 class DatabaseError(Exception):
     pass
@@ -50,6 +51,9 @@ def runQuery(query):
         raise DatabaseError("Database cannot be connected to at this time")
 
 def runScalarQuery(query):
+    """
+    Concsiouc decision to not return full dataset object for scalar query.
+    """
     try:
         return runQuery(query)[0][0]
     except IndexError as e:
