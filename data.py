@@ -4,8 +4,29 @@ Localize database queries.
 import db
 import datetime
 
+def statusReport(ticker_id,start_date=None, end_date=None):
+    """
+    Report on how well often prices were recieved over the course
+    of an hour.
+    """
+    if end_date is None:
+        end_date = datetime.datetime.now()
+    start_date = end_date - datetime.timedelta(days=3)
+    query = f"""select YEAR(finished_t_stamp) as 'Year',
+    MONTH(finished_t_stamp) as 'Month',
+    DAY(finished_t_stamp) as 'Day',
+    HOUR(finished_t_stamp) as 'Hour',
+    if(count(*)>60,60,count(*)) as 'Count' 
+    FROM prices 
+    WHERE fk_symbol_id={ticker_id} AND 
+    started_t_stamp < '{end_date}' and started_t_stamp >'{start_date}'
+    GROUP BY YEAR(finished_t_stamp),MONTH(finished_t_stamp),DAY(finished_t_stamp),HOUR(finished_t_stamp);
+    ORDER BY Year ASC, Month ASC, Day ASC, Hour ASC"""
+    results = db.runQuery(query)
+    return results
+
 def getTickers():
-    return db.runQuery("SELECT id, ticker FROM tickers")
+    return db.runQuery("SELECT id, symbol FROM ticker")
 
 def getCurrentTickerValues():
     query = """
@@ -15,6 +36,36 @@ def getCurrentTickerValues():
     WHERE (p.started_t_stamp,p.fk_symbol_id) IN (SELECT MAX(started_t_stamp), fk_symbol_id FROM prices GROUP BY fk_symbol_id);
     """
     return db.runQuery(query)
+
+def getHistoricalPrices(ticker_id, start_date, end_date):
+    """
+    Gets historical prices for the different stocks in ticker table.
+    Args:
+        ticker_id: inselect t, id of the ticker whos price you want
+        start_date: datetime
+        end_date: datetime
+    Returns:
+        List of tuples (str: Symbol, dt timeofprice, float price) 
+        [("ETH.X", "2021-11-19 17:21:01", 4010.9500),...]
+    """
+    query = f"select t.symbol, p.started_t_stamp, p.price from prices p JOIN ticker t ON p.fk_symbol_id = t.id where fk_symbol_id = {ticker_id} AND started_t_stamp > '{start_date}' AND started_t_stamp < '{end_date}' order by p.id desc;"
+    results = db.runQuery(query)
+    # Should this get parsed somehow? Datetime objec and decimal objects. 
+    return results
+
+def getHistoricalPortfolioValues(ticker_id, start_date=None, end_date=None):
+    """
+    Returns a dataset of values consisting of the shares at the time
+    multiplied by the shares at the time to create the portfolio value at the moment.
+    Args:
+        start_date: datetime, if none dfaults to now
+        end_date: datetime, if none, defaultes to 10 minutes ago
+    Returns:
+        [('ETH.X'), ("2021-11-19 19:59:00", 4200.24, 12.91), ()] 
+    """
+    query = f"""select t.symbol, p.started_t_stamp, p.price, ps.shares, p.price*ps.shares, ps.shares*ps.cost_basis from prices p JOIN ticker t ON p.fk_symbol_id = t.id JOIN positions ps ON p.fk_symbol_id = ps.fk_symbol_id WHERE p.fk_symbol_id = {ticker_id} ORDER BY p.id DESC LIMIT 10;"""
+    results = db.runQuery(query)
+    return results
 
 def getPortfolio(as_of_date=None, with_subtotals=False):
     """
