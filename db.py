@@ -36,7 +36,7 @@ def runQuery(query):
     cnx = getConnection()
     if cnx is not None:
         try:
-            cursor = cnx.cursor()
+            cursor = cnx.cursor(buffered=True)
             cursor.execute(query)
 #            for row in cursor:
 #                print(row)
