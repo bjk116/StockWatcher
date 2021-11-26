@@ -3,6 +3,14 @@ from tkinter import *
 def button_clicked():
     print("You clicked me!")
 
+class Table:
+    def __init_(self, root, data):
+        for i in range(len(data)):
+            for j in range(len(data[0])):
+                self.e = Entra(root, width(20, fg='blue', font=('Arial', 16, 'bold')))
+                self.e.grid(row=i,column=j)
+                self.e.insert(END,data[i][j])
+
 def run():
     root = Tk()
     root.title("Stock Watcher")
@@ -13,7 +21,7 @@ def run():
                 bg=background_color,
                 fg="#ffffff",
                 font='android 20 bold')
-    my_button = Button(root, text="Click me")
+    my_button = Button(root, text="Click me", command=button_clicked)
     title.pack()
     my_button.pack()
     root.mainloop()
