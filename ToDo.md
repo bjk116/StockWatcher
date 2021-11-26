@@ -1,5 +1,5 @@
 Next On Docket:
-    push to github
+DONE    push to github
     start organizing modules into folders?
     use proper format for python project ie __init__.py stuff
 
@@ -23,25 +23,29 @@ Logger:
     How to set line limit of log file/make a log1.log, log2.log, etc up to an arbitrarily set amount
 
 IO:
-    rename to Gui.py
-    Start making a curses application - seems easier
-    Maybe someone else can make a tkinter version
-    Perhaps a way to serve it as HTML as well - might be best bet given I want to be able to see the information on my phone
+DONE    rename to Gui.py
+DONE Start making a curses application - seems easier
+DONE - ITS GOING TO BE ME    Maybe someone else can make a tkinter version
+SKIP FOR NOE    Perhaps a way to serve it as HTML as well - might be best bet given I want to be able to see the information on my phone
 
 Reports:
     schedule weekly on saturday at noon report of that weeks performance
-    makes matplot lib into a reportonto a pdf
+HAVE FUNCTION THAT CAN MAKE BASIC REPROTS NOW makes matplot lib into a reportonto a pdf
 
 Notifications:
-    make a method for emailing user
+CAN EMAIL WITH enotification.py    make a method for emailing user
     make a method for texting user
-    make a method for laptop notification
+FOUND WAY   make a method for laptop notification
     make a method for phone notification somehow?
 
 Database:
     convert to sqlite3 so that it can be part of an executable package (not possible with mysql)
     convert all current table definitions to sqlite3 syntax
     going to probably have to change queries slightly in data.py
+    Tables: 
+        alarm_events: when an alarm gets triggered, it gets inserted here
+        notification_events: associated with alarm_events, to track if an alarm's been acknowloedged or not etc
+        
 
 db.py:
     add pruning logic - get rid of intermediary day prices (only keep open/close/max/low of day) after X days
