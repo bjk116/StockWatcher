@@ -6,13 +6,13 @@ import matplotlib.pyplot as plt
 import data
 import datetime
 import db
+import util
 
 def runStatusReport():       
     end_date = datetime.datetime.now()
     start_date = end_date - datetime.timedelta(days=3)
     results = data.statusReport(1, start_date=start_date, end_date=end_date)
     return results
-
 
 def singleStockPrice(ticker_id, start_date=None, end_date=None, minute_differential=None):
     """
