@@ -5,7 +5,20 @@ Top level functions that will be called, implementations can exist in other modu
 import gi
 gi.require_version("Notify", "0.7")
 from gi.repository import Notify
-Notify.init("Stock Watche")
+Notify.init("Stock Watcher")
+
+class Notification():
+    """
+    When an alarm gets triggered, we create one of these.
+    """
+    def __init__(self):
+        pass
+
+class LaptopNotification(Notification):
+    pass    
+
+
+
 
 notification = Notify.Notification.new(
 "Summary here!",
