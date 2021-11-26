@@ -1,6 +1,7 @@
 import db
 import data
 import subprocess
+import enotification
 # TO DO: Make ALARM_TYPES and NOTIFICATION_TYPES be populated by db of same tablenames
 # TO DO: Add columns to ALARM TYPES that say PW_gt/PW_lt are of type PriceWatch and the others are of time differential type
 # PW stands for Price Watch, gt is greater than, lt is less than
@@ -95,9 +96,11 @@ class Alarm():
         pass
     
     def notifyEmail(self, message):
-        pass
+        print(f"Sending an email with {message}")
+    #    enotification.sendEmail(message)
 
     def notify(self, message):
+        # TODO I think Notification should probably be its own object
         # Make a message, should be able to do it based on alarm_type and price or differential.
         # then, using same method as in checkConditions, use a dict of functions to dispatch the method in the preferred manner
         # But ultimately, this may called based on log alarms.
@@ -106,45 +109,60 @@ class Alarm():
             'SMS':self.notifyEmail, 
             'Email':self.notifyEmail
         }
-        mapping[self.notification_type](message)
-
-
-    def checkPriceGT(self):
-        self.currentPrice = data.getCurrentPrice(self.ticker_id)
-        if self.currentPrice >= self.price:
-            message = {
-                "title":f"Price of {self.ticker} is above {self.price}!",
-                "subtitle": f"Current price is {self.currentPrice}"
-            }
-            self.notify(message)
-    
-    def checkPriceLT(self):
-        self.currentPrice = data.getCurrentPrice(self.ticker_id)
-        if self.currentPrice <= self.price:
-            message = {
-                "title":f"Price of {self.ticker} is below {self.price}!",
-                "subtitle": f"Current price is {self.currentPrice}"
-            }
-            self.notify(message)
-
-    def checkConditions(self):
-        """
-        Where the meat of the alarm logic will go, checking currnet prices against differentialand 
-        """
         try:
-            mapping =   {
-                            "PW_gt":self.checkPriceGT,
-                            "PW_lt":self.checkPriceLT,
-                            "inc_gt_over_t":None,
-                            "dec_gt_over_t":None
-                        }
-            mapping[self.alarm_type]()
-        except (KeyError, TypeError) as e:
-            # Catch if key does not exist, or if alarm type is None
-            raise ValueError("Implementation of your type has not been done yet.")
+            self.notifyLaptop(message)
+            self.notifyEmail(message)
+#            mapping[self.notification_type](message)
+        except Exception as e:
+            print("Something happened during notification")
+            print(str(e))
+
+    def alarmActive(self):
+        """
+        Abstract method, needs to be implemented by the sublass
+        Return:
+            bool, true if alarm is on, false if it is not
+        """
+        pass
+
+    def saveToDB(self):
+        print(f"INSERT INTO alarm_events")
+    
+    def checkStatus(self):
+        if self.alarmActive():
+            # save to  alarm event
+            self.saveToDB()
 
     def __str__(self):
         return f"Alarm of {self.alarm_type} notify by {self.notification_type} for {self.ticker} with price {self.price} or differential {self.differential}"
+
+class LessThanAlarm(Alarm):
+    alarm_id = 2
+    def alarmActive(self):
+        self.currentPrice = data.getCurrentPrice(self.ticker_id)
+        return self.currentPrice <= self.price
+            # message = {
+            #     "title":f"Price of {self.ticker} is below {self.price}!",
+            #     "subtitle": f"Current price is {self.currentPrice}"
+            # }
+    
+    def afterActive(self):
+        pass
+
+class GreaterThanAlarm(Alarm):
+    alarm_id = 1
+    def alarmActive(self):
+        self.currentPrice = data.getCurrentPrice(self.ticker_id)
+        return self.currentPrice >= self.price
+            # message = {
+            #     "title":f"Price of {self.ticker} is above {self.price}!",
+            #     "subtitle": f"Current price is {round(self.currentPrice,2)}"
+            # }
+            # self.notify(message)
+    
+    def afterActive(self):
+        pass
+
 
 def loadAlarms():
     """
@@ -154,7 +172,8 @@ def loadAlarms():
     """
     alarms = db.runQuery("SELECT fk_ticker_id, fk_notification_type_id, fk_alarm_type_id, price, differential FROM alarms")
     print(alarms)
-    return [Alarm(ticker, notification_type_id, alarm_type_id, price=price, differential=differential) for (ticker, notification_type_id, alarm_type_id, price, differential) in alarms]
+    return [LessThanAlarm(1, 2, 1, price=4100), GreaterThanAlarm(1, 1, 1, price=4000)]
+ #   return [Alarm(ticker, notification_type_id, alarm_type_id, price=price, differential=differential) for (ticker, notification_type_id, alarm_type_id, price, differential) in alarms]
 
 def runAlarms():
     # TODO just occured to me here the foreign key constriant shoudl be if the ticker id is deleted, the alarm should be deleted.
@@ -162,7 +181,7 @@ def runAlarms():
     alarms = loadAlarms()
     for alarm in alarms:
         print(alarm)
-        alarm.checkConditions()
+        alarm.checkStatus()
 
 if __name__ == "__main__":
     runAlarms()
