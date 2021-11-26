@@ -3,11 +3,13 @@ Localize database queries.
 """
 import db
 import datetime
+import util
 
 def statusReport(ticker_id,start_date=None, end_date=None):
     """
-    Report on how well often prices were recieved over the course
-    of an hour.
+    Report on how well often prices were recieved over the course of an hour.
+    Args:
+        ticker_id: int, id of the stock to get a status report for
     """
     if end_date is None:
         end_date = datetime.datetime.now()
@@ -16,14 +18,17 @@ def statusReport(ticker_id,start_date=None, end_date=None):
     MONTH(finished_t_stamp) as 'Month',
     DAY(finished_t_stamp) as 'Day',
     HOUR(finished_t_stamp) as 'Hour',
-    if(count(*)>60,60,count(*)) as 'Count' 
+    IF(count(*)>60,60,count(*)) as 'Count' 
     FROM prices 
     WHERE fk_symbol_id={ticker_id} AND 
     started_t_stamp < '{end_date}' and started_t_stamp >'{start_date}'
     GROUP BY YEAR(finished_t_stamp),MONTH(finished_t_stamp),DAY(finished_t_stamp),HOUR(finished_t_stamp);
     ORDER BY Year ASC, Month ASC, Day ASC, Hour ASC"""
     results = db.runQuery(query)
-    return results
+    parsed_results = x = [(datetime.datetime(year, month, day, hour),count) for (year, month, day, hour, count) in results]
+    intervals = util.get_intervals(parsed_results[0][0], parsed_results[-1][0], hours=1)
+    final_data = []
+    return parsed_results, intervals
 
 def getTickers():
     return db.runQuery("SELECT id, symbol FROM ticker")
