@@ -2,7 +2,9 @@
 FUnctions used all over.  Mostly time related.
 Shit should I call this something time related instaed?
 """
+from functools import wraps
 from datetime import datetime, timedelta
+import time
 
 def default_start_end_times(start_date=None, end_date=None):
     """
@@ -25,3 +27,11 @@ def get_intervals(start_date, end_date, **kwargs):
         invervals.append(start_date)
         start_date = start_date + timedelta(**kwargs)
     return invervals
+
+def time_function(func):
+    @wraps(func)
+    def wrapper_func(*args, **kwargs):
+        start = time.perf_counter()
+        func(*args, **kwargs)
+        end = time.perf_count()
+    return wrapper_funct
