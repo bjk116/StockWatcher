@@ -9,6 +9,9 @@ BASE_URL = "https://stocktwits.com/symbol/"
 
 logging.basicConfig(filename='log.log', level=logging.DEBUG)
 
+class ScrapingError(Exception):
+    pass
+
 def getPrice(ticker='ETH.X'):
     """
     Returns price of ticker,or raises ValueError if price cannot be cast to float or an AttributeError if the tag is not properly found.
@@ -27,6 +30,7 @@ def getPrice(ticker='ETH.X'):
     return float(ticker_text.nextSibling.text)
 
 def savePrice(dt, price, db_id):
+    # TODO Should probably go under data.py?
     formatted_dt = dt.strftime("%Y-%m-%d %H:%M:%S")
     query = f"INSERT INTO prices (price, fk_symbol_id, started_t_stamp) VALUES ({price}, {db_id}, '{formatted_dt}')"
     db.runUpdateQuery(query)
@@ -40,24 +44,20 @@ def getAndStorePrices():
         current_time = datetime.datetime.now()
         price = getPrice(ticker)
         savePrice(current_time, price, db_id)
-        
-if __name__ == '__main__':
+
+def main():
 #    command = sys.argv[1]
     noErrors = True
     logging.info("Running app.py")
     print("Running app.py")
 #    if command == 'getAndSave':
-    if True:
-        try:
-            getAndStorePrices()
-        except Exception as e:
-            print("unexpected error during get and store prices")
-            logging.error("Unexpected error occured while running get and Store prices")
-            logging.error(e)
-            noErrors = False
-        finally:
-            if noErrors:
-                print("Completed withuot errors")
-            else:
-                print("Completed with errors")
+    try:
+        getAndStorePrices()
+    except Exception as e:
+        print("unexpected error during get and store prices")
+        logging.error("Unexpected error occured while running get and Store prices")
+        logging.error(e)
+        noErrors = False
 
+if __name__ == '__main__':
+    main()
