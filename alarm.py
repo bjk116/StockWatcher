@@ -126,7 +126,7 @@ class Alarm():
         pass
 
     def saveToDB(self):
-        print(f"INSERT INTO alarm_events")
+        print(f"INSERT INTO alarm_events ()")
     
     def checkStatus(self):
         if self.alarmActive():
