@@ -40,7 +40,12 @@ def getCurrentTickerValues():
     LEFT JOIN ticker t ON t.id = p.fk_symbol_id 
     WHERE (p.started_t_stamp,p.fk_symbol_id) IN (SELECT MAX(started_t_stamp), fk_symbol_id FROM prices GROUP BY fk_symbol_id);
     """
-    return db.runQuery(query)
+    columns = ['symbol', 'price', 't_stamp']
+    data = db.runQuery(query)
+    result = []
+    for row in data:
+        result.append({columns[i] : row[i] for i, _ in enumerate(row)})
+    return result
 
 def getHistoricalPrices(ticker_id, start_date, end_date):
     """
