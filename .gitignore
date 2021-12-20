@@ -1,5 +1,7 @@
 config.json
 .idea
+pushCommand.sh
+pushcommand.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -133,4 +135,5 @@ dmypy.json
 
 # Custom
 pushcommand.sh
+pushCommand.sh
 config.json
