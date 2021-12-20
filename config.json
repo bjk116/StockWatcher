@@ -1,1 +1,9 @@
-{"db": {"user": "stock_watcher", "password": "StockWatcher!1234", "database":"stock_watcher","host":"localhost"}}
+{"db": {
+    "user": "stock_watcher", 
+    "password": "StockWatcher!1234", 
+    "database":"stock_watcher",
+    "host":"localhost"},
+"email":{
+    "user":"swapplicationemailer@gmail.com", 
+    "password":"Normie419"}
+}
