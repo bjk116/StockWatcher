@@ -1,0 +1,3 @@
+fastapi
+"univcorn[standard]"
+mysql-connector
