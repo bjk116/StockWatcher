@@ -4,18 +4,45 @@ The database layer, extracted away.
 import json
 import mysql.connector
 from mysql.connector import errorcode
-import classes
+#import classes
 
 class DatabaseError(Exception):
     pass
 
+# Attempt 3
+# TODO Make attempt three the official production code
+from contextlib import closing
+def runQuery(query):
+    credentials = getCredentials()
+    print(credentials)
+    with closing(mysql.connector.connect(**credentials)) as conn:
+        with closing(conn.cursor(buffered=True)) as cursor:
+            cursor.execute(query)
+            return cursor.fetchall().copy()
+
+def runScalarQuery(query):
+    try:
+        return runQuery(query)[0][0]
+    except IndexError as e:
+        return None
+
+def runUpdateQuery(query):
+    credentials = getCredentials()
+    with closing(mysql.connector.connect(**credentials)) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute(query)
+            conn.commit()
+# End of attempt 3 - 21 lines of code boy howdy
+
+
+## Attempt #1 - so far, getCredentials is used in evey iteration until a better way is found
 def getCredentials():
     # Returns username, password, connection string info - is this a bad idea?
     data = None
 #   TODO fix the relative loading thing
 #    with open('/home/github/StockWatcher/config.json', 'r') as f:
 #        data = json.load(f)['db']
-    data = {"db": {"user": "stock_watcher", "password": "StockWatcher!1234", "database":"stock_watcher","host":"localhost"}}
+    data = {"db": {"user": "stock_watcher", "password": "StockWatcher!1234", "database":"stock_watcher","host":"localhost", }}
     return data['db']
 
 def getConnection():
@@ -31,52 +58,9 @@ def getConnection():
         else:
             print(err)
 
-def runQuery(query):
-    # To do - parser for to check there is no update/insert/delete/create etc
-    cnx = getConnection()
-    if cnx is not None:
-        try:
-            cursor = cnx.cursor(buffered=True)
-            cursor.execute(query)
-#            for row in cursor:
-#                print(row)
-            return cursor.fetchall().copy()
-        except Exception as e:
-            print(f"Error when trying to run query: {query}")
-            print(e)
-        finally:
-            cursor.close()
-            cnx.close()
-    else:
-        raise DatabaseError("Database cannot be connected to at this time")
-
-def runScalarQuery(query):
-    """
-    Concsiouc decision to not return full dataset object for scalar query.
-    """
-    try:
-        return runQuery(query)[0][0]
-    except IndexError as e:
-        # Log
-        return None
-
-def runUpdateQuery(query):
-    cnx = getConnection()
-    if cnx is not None:
-        try:
-            cursor = cnx.cursor()
-            cursor.execute(query)
-            cnx.commit()
-        except Exception as e:
-            print(f"something went wrong when running update query: {query}")
-            print(e)
-        finally:
-            cursor.close()
-            cnx.close()
-
 def testConnection():
-    results = runQuery("SELECT 1")
-    assert results[0][0] == 1
+    results = runScalarQueryThree("SELECT 1")
+    assert results == 1
 
 if __name__ == '__main__':
     testConnection()
